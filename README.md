@@ -1,3 +1,3 @@
 # Customer-Churn
 
-A simple model predicting customer churn
+An xgboost model predicting customer churn
