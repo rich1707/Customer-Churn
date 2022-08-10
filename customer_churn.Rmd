@@ -2,15 +2,8 @@
 title: "Customer Churn"
 author: "Richard Ryan"
 date: '28 June 2022'
-output: 
-   html_document:
-      css: style.css
-      theme: readable
-      highlight: pygments
-      toc: true
-      toc_depth: 3
-      toc_float: true
-      number_sections: true
+output: html_document
+      
       
 ---
 
@@ -24,7 +17,6 @@ knitr::opts_chunk$set(
 )
 ```
 
-<body style="background-color:#e8dcda;">
 
 # Introduction
 

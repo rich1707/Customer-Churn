@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-<body style="background-color:#e8dcda;">
+<body style="background-color:#ede8df;">
 
 # Introduction
 
@@ -226,7 +226,7 @@ churn %>%
              churned = sum(churn_label == "Yes")) %>% 
    arrange(desc(churned)) %>% 
    ggplot(aes(x = totals, y = churned)) + 
-   geom_point(size = 3, colour = "#CB9E23") +
+   geom_point(size = 3, colour = "#7a8477") +
    geom_smooth(method = "lm", formula = y ~ x, size = 1.5, se = FALSE, colour = "black") + 
    labs(x = "Total Customers", y = "Total Churn",
         title = "Customer churn by city",
@@ -270,7 +270,7 @@ Is the same true of the other location variables? By plotting the `latitude` and
 churn %>% 
    mutate(churn_label = recode(churn_label, Yes = "Churned", No = "Retained")) %>% 
    ggplot(aes(x = longitude, y = latitude)) +
-   geom_point(size = 3, alpha = 0.25, colour = "#CB9E23") + 
+   geom_point(size = 3, alpha = 0.25, colour = "#7a8477") + 
    labs(x = "Longitude", y = "Latitude") + 
    facet_wrap(~churn_label) + 
    theme(
@@ -692,7 +692,7 @@ plot_payment <- churn %>%
       payment_method, c("Electronic check", "Mailed check", "Bank transfer", "Credit card")
    )) %>% 
    ggplot(aes(x = payment_method, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", width = 0.65, alpha = 0.5) + 
+   geom_bar(position = "dodge", colour = "black", width = 0.9, alpha = 0.5) + 
    labs(x = NULL, y = NULL, title = "Payment methods") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -705,7 +705,7 @@ plot_payment <- churn %>%
       legend.title = element_blank()
    )
 
-(plot_billing + plot_contract) / plot_payment +
+plot_payment / (plot_billing + plot_contract) +
    plot_layout(guides = "collect")
 
 ```
@@ -723,7 +723,7 @@ plot_contract_tech <- churn %>%
    filter(internet_service == "Fiber optic") %>% 
    select(contract, churn_label) %>%
    ggplot(aes(x = contract, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", width = 0.625, alpha = 0.5) +
+   geom_bar(position = "dodge", colour = "black", width = 0.8, alpha = 0.5) +
    labs(x = NULL, y = NULL, title = "Contract length for technically aware customers") +
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -740,7 +740,7 @@ plot_contract_non_tech <- churn %>%
    filter(internet_service != "Fiber optic") %>% 
    select(contract, churn_label) %>%
    ggplot(aes(x = contract, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", width = 0.625, alpha = 0.5) + 
+   geom_bar(position = "dodge", colour = "black", width = 0.9, alpha = 0.5) + 
    labs(x = NULL, y = NULL, title = "Contract length for non-technically aware customers") +
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
