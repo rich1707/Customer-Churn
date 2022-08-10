@@ -723,7 +723,7 @@ plot_contract_tech <- churn %>%
    filter(internet_service == "Fiber optic") %>% 
    select(contract, churn_label) %>%
    ggplot(aes(x = contract, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", width = 0.8, alpha = 0.5) +
+   geom_bar(position = "dodge", colour = "black", width = 0.9, alpha = 0.5) +
    labs(x = NULL, y = NULL, title = "Contract length for technically aware customers") +
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
