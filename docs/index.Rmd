@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
 
 The following is an attempt to build a model predicting customer churn. Building such a model is both difficult and important. It is important because, in the business world, retaining customers is much more cost-effective than attracting new ones, often by a factor of four or above. But what makes the task difficult is that the dataset with which we work will always be imbalanced. 
 
-An imbalanced dataset is problematic because it can be highly accurate but still unfit for purpose. For example, if we have a dataset where 99.99% of customers do not churn, then our model will archive almost perfect accuracy if it predicts that no one churns; but such a model would have zero utility. Balancing accuracy and utility is a far from easy task, as we shall see.
+An imbalanced dataset is problematic when building a model because such a model can be highly accurate but still unfit for purpose. For example, if we have a dataset where 99.99% of customers do not churn, then our model will archive almost perfect accuracy if it predicts that no one churns; but such a model would have zero utility. Balancing accuracy and utility is a far from easy task, as we shall see.
 
 We start by loading in all of the libraries we'll need:
 
@@ -58,7 +58,7 @@ The data is given as an `xlsx` file rather than as a `csv`. We can read this dat
 
 ```{r}
 
-churn <- read_xlsx("Telco_customer_churn.xlsx") %>% 
+churn <- read_xlsx("Telco_customer_churn.xlsx") |> 
    clean_names()
 
 ```
@@ -71,8 +71,9 @@ Thankfully the dataset doesn't require much cleaning. There are, however, a few 
 
 ```{r}
 
-churn %>% 
-   map_int(~sum(is.na(.x))) %>% sort(decreasing = TRUE)
+churn |> 
+   map_int(~sum(is.na(.x))) |> 
+   sort(decreasing = TRUE)
 
 ```
 
@@ -80,7 +81,7 @@ Obviously the `churn_reason` variable needs to be deleted. It shows `NA` wheneve
 
 ```{r}
 
-churn <- churn %>% 
+churn <- churn |> 
    select(-churn_reason)
 
 ```
@@ -90,8 +91,8 @@ The other variable with missing values is `total_charges`. When we examine our d
 
 ```{r}
 
-churn %>% 
-   filter(tenure_months == 0) %>% 
+churn |> 
+   filter(tenure_months == 0) |> 
    select(tenure_months, total_charges)
 
 ```
@@ -100,7 +101,7 @@ As these are brand new accounts, we can assume the `total_charges` is zero in ea
 
 ```{r}
 
-churn <- churn %>% 
+churn <- churn |> 
    mutate(total_charges = replace_na(total_charges, 0))
 
 ```
@@ -109,7 +110,7 @@ Now all of the missing values have been replaced, we can look to simplify our da
 
 ```{r}
 
-churn <- churn %>% 
+churn <- churn |> 
    select(-customer_id, -count)
 
 ```
@@ -118,7 +119,7 @@ Consider also the `country` and `state` variables:
 
 ```{r}
 
-churn %>% 
+churn |> 
    distinct(country, state)
 
 ```
@@ -127,7 +128,7 @@ All customers are located in California, so neither the `country` nor the `state
 
 ```{r}
 
-churn <- churn %>% 
+churn <- churn |> 
    select(-country, -state)
 
 ```
@@ -136,7 +137,7 @@ The `lat_long` variable can also be removed, as we have this data in separate `l
 
 ```{r}
 
-churn <- churn %>% 
+churn <- churn |> 
    select(-lat_long)
 
 ```
@@ -145,7 +146,7 @@ The `churn_value` variable isn't needed because we will use `churn_label` as our
 
 ```{r}
 
-churn <- churn %>% 
+churn <- churn |> 
    select(-churn_value)
 
 ```
@@ -154,7 +155,7 @@ The `churn_score` feature is problematic problematic because it was calculated f
 
 ```{r}
 
-churn <- churn %>% 
+churn <- churn |> 
    select(-churn_score)
 
 ```
@@ -174,12 +175,12 @@ We shall consider these categories in much more detail below; but first let's ta
 
 ```{r}
 
-churn %>%
-   mutate(across(where(is.character), as.factor)) %>% 
-   mutate(across(everything(), as.numeric)) %>% 
-   correlate(quiet = TRUE) %>% 
-   focus(churn_label) %>% 
-   mutate(churn_label = abs(churn_label)) %>%
+churn |>
+   mutate(across(where(is.character), as.factor)) |> 
+   mutate(across(everything(), as.numeric)) |> 
+   correlate(quiet = TRUE) |> 
+   focus(churn_label) |> 
+   mutate(churn_label = abs(churn_label)) |>
    ggplot(aes(x = reorder(term, churn_label), y = churn_label)) + 
    geom_point(size = 2) +
    geom_segment(aes(x = term, xend = term, y = 0, yend = churn_label), size = 1.25) +
@@ -202,8 +203,8 @@ We can begin by getting an overview of the city variable:
 
 ```{r}
 
-churn %>% 
-   count(city, name = "totals") %>%  
+churn |> 
+   count(city, name = "totals") |>  
    summarise(
       total_cities = length(city),
       total_customers = sum(totals),
@@ -220,14 +221,13 @@ It is often problematic trying to draw conclusions from this kind of data, but t
 
 ```{r}
 
-churn %>% 
-   group_by(city) %>% 
+churn |> 
+   group_by(city) |> 
    summarise(totals = n(),
-             churned = sum(churn_label == "Yes")) %>% 
-   arrange(desc(churned)) %>% 
+             churned = sum(churn_label == "Yes")) |> 
+   arrange(desc(churned)) |> 
    ggplot(aes(x = totals, y = churned)) + 
-   geom_point(size = 3, colour = "#7a8477") +
-   geom_smooth(method = "lm", formula = y ~ x, size = 1.5, se = FALSE, colour = "black") + 
+   geom_point(size = 1.5, colour = "#CB9E23") +
    labs(x = "Total Customers", y = "Total Churn",
         title = "Customer churn by city",
         subtitle = "Showing total customers vs. total who churn") +
@@ -247,15 +247,16 @@ Let's confirm this with a simple linear model: we `group_by()` city and use the 
 
 ```{r}
 
-churn %>% 
-   group_by(city) %>% 
+by_city <- churn |> 
+   group_by(city) |> 
    summarise(
       totals = n(),
-      churned = sum(churn_label == "Yes")
-   ) %>% 
-   ungroup() %>% 
-   lm(churned ~ totals, data = .) %>% 
-   glance() %>% 
+      churned = sum(churn_label == "Yes"),
+      .groups = "drop"
+   ) 
+
+lm(churned ~ totals, data = by_city) |> 
+   glance() |> 
    select(r.squared, p.value)
 
 ```
@@ -267,10 +268,10 @@ Is the same true of the other location variables? By plotting the `latitude` and
 
 ```{r}
 
-churn %>% 
-   mutate(churn_label = recode(churn_label, Yes = "Churned", No = "Retained")) %>% 
+churn |> 
+   mutate(churn_label = recode(churn_label, Yes = "Churned", No = "Retained")) |> 
    ggplot(aes(x = longitude, y = latitude)) +
-   geom_point(size = 3, alpha = 0.25, colour = "#7a8477") + 
+   geom_point(size = 3, alpha = 0.5, colour = "#CB9E23", shape = 1) + 
    labs(x = "Longitude", y = "Latitude") + 
    facet_wrap(~churn_label) + 
    theme(
@@ -282,11 +283,11 @@ churn %>%
    
 ```
 
-It seems from the above plot that the distribution of the two groups is very similar. All in all, it looks as though the location features have little explanatory power to offer to our model; therefore we are better off dropping them. 
+It seems from the above plot that the distribution of the two groups is very similar. All in all, it appears that the location features have little explanatory power to offer to our model; therefore we are better off dropping them. 
 
 ```{r}
 
-churn <- churn %>% 
+churn <- churn |> 
    select(-city, -zip_code, -latitude, -longitude)
 
 ```
@@ -306,9 +307,9 @@ We can plot these features in a single chart to make comparison easier:
 
 ```{r}
 
-plot_gender <- churn %>% 
+plot_gender <- churn |> 
    ggplot(aes(x = gender, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", alpha = 0.5) +
+   geom_bar(position = "dodge2", colour = "black", alpha = 0.5, width = 0.5) +
    labs(x = NULL, y = NULL, title = "Gender") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -322,12 +323,12 @@ plot_gender <- churn %>%
       legend.text = element_text(face = "bold")
    )
 
-plot_senior <- churn %>% 
+plot_senior <- churn |> 
    mutate(senior_citizen = if_else(
       senior_citizen == "Yes", "Senior Citizen", "Not Senior"
-   )) %>%
+   )) |>
    ggplot(aes(x = senior_citizen, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", alpha = 0.5) +
+   geom_bar(position = "dodge2", colour = "black", alpha = 0.5, width = 0.5) +
    labs(x = NULL, y = NULL, title = "Seniors") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -341,10 +342,10 @@ plot_senior <- churn %>%
       legend.text = element_text(face = "bold")
    )
 
-plot_partner <- churn %>% 
-   mutate(partner = if_else(partner == "No", "No Partner", "Partner")) %>%
+plot_partner <- churn |> 
+   mutate(partner = if_else(partner == "No", "No Partner", "Partner")) |>
    ggplot(aes(x = partner, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", alpha = 0.5) +
+   geom_bar(position = "dodge2", colour = "black", alpha = 0.5, width = 0.5) +
    labs(x = NULL, y = NULL, title = "Partners") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -358,13 +359,13 @@ plot_partner <- churn %>%
       legend.text = element_text(face = "bold")
    )
 
-plot_dependents <- churn %>% 
+plot_dependents <- churn |> 
    mutate(
       dependents = if_else(dependents == "No", "No Dependents", "Dependents"),
       dependents = factor(dependents, levels = c("No Dependents", "Dependents"))
-   ) %>%
+   ) |>
    ggplot(aes(x = dependents, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", alpha = 0.5) +
+   geom_bar(position = "dodge2", colour = "black", alpha = 0.5, width = 0.5) +
    labs(x = NULL, y = NULL, title = "Dependents") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -411,7 +412,7 @@ There is quite a lot of overlap in these features. For example, the first featur
 
 ```{r}
 
-churn <- churn %>% 
+churn <- churn |> 
    select(-phone_service)
 
 ```
@@ -420,17 +421,17 @@ Let's first plot our subscribers to `primary` services:
 
 ```{r}
 
-plot_phone <- churn %>% 
+plot_phone <- churn |> 
    mutate(multiple_lines = case_when(
       multiple_lines == "No" ~ "Single line",
       multiple_lines == "Yes" ~ "Multiple lines",
-      TRUE ~ "No phone"
-   )) %>% 
+      .default = "No phone"
+   )) |> 
    mutate(multiple_lines = fct_relevel(
       multiple_lines, c("Single line", "Multiple lines", "No Phone")
-   )) %>% 
+   )) |> 
    ggplot(aes(x = multiple_lines, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", alpha = 0.5) +
+   geom_bar(position = "dodge2", colour = "black", alpha = 0.5, width = 0.5) +
    labs(x = NULL, y = NULL, title = "Phone Lines") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -444,12 +445,12 @@ plot_phone <- churn %>%
       legend.text = element_text(face = "bold")
    )
 
-plot_internet <- churn %>% 
+plot_internet <- churn |> 
    mutate(internet_service = if_else(
       internet_service == "No", "No internet", internet_service
-   )) %>% 
+   )) |> 
    ggplot(aes(x = internet_service, fill = churn_label)) + 
-   geom_bar(position = "dodge",colour = "black", alpha = 0.5) + 
+   geom_bar(position = "dodge2",colour = "black", alpha = 0.5, width = 0.5) + 
    labs(x = NULL, y = NULL, title = "Internet Service") +
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -463,17 +464,17 @@ plot_internet <- churn %>%
       legend.text = element_text(face = "bold")
    )
 
-plot_movies <- churn %>% 
+plot_movies <- churn |> 
    mutate(streaming_movies = case_when(
       streaming_movies == "No" ~ "No movies",
       streaming_movies == "Yes" ~ "Movies",
-      TRUE ~ "No internet"
-   )) %>% 
+      .default = "No internet"
+   )) |> 
    mutate(streaming_movies = fct_relevel(
       streaming_movies, c("No movies", "Movies", "No internet")
-   )) %>% 
+   )) |> 
    ggplot(aes(x = streaming_movies, fill = churn_label)) + 
-   geom_bar(position = "dodge",colour = "black", alpha = 0.5) + 
+   geom_bar(position = "dodge2",colour = "black", alpha = 0.5, width = 0.5) + 
    labs(x = NULL, y = NULL, title = "Stream Movies") +
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -487,17 +488,17 @@ plot_movies <- churn %>%
       legend.text = element_text(face = "bold")
    )
 
-plot_tv <- churn %>% 
+plot_tv <- churn |> 
    mutate(streaming_tv = case_when(
       streaming_tv == "No" ~ "No TV",
       streaming_tv == "Yes" ~ "TV",
-      TRUE ~ "No internet"
-   )) %>% 
+      .default = "No internet"
+   )) |> 
    mutate(streaming_tv = fct_relevel(
-      streaming_tv, levels = c("No TV", "TV", "No internet")
-   )) %>% 
+      streaming_tv, c("No TV", "TV", "No internet")
+   )) |> 
    ggplot(aes(x = streaming_tv, fill = churn_label)) + 
-   geom_bar(position = "dodge",colour = "black", alpha = 0.5) + 
+   geom_bar(position = "dodge2",colour = "black", alpha = 0.5, width = 0.5) + 
    labs(x = NULL, y = NULL, title = "Stream TV") +
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -531,17 +532,17 @@ We can plot these variables as before:
 
 ```{r}
 
-plot_security <- churn %>% 
+plot_security <- churn |> 
    mutate(online_security = case_when(
       online_security == "Yes" ~ "Security",
       online_security == "No" ~ "No security",
-      TRUE ~ "No internet"
-   )) %>% 
+      .default = "No internet"
+   )) |> 
    mutate(online_security = fct_relevel(
-      online_security, levels = c("No security", "Security", "No internet"))
-   ) %>% 
+      online_security, c("No security", "Security", "No internet"))
+   ) |> 
    ggplot(aes(x = online_security, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", alpha = 0.5) + 
+   geom_bar(position = "dodge2", colour = "black", alpha = 0.5, width = 0.5) + 
    labs(x = NULL, y = NULL, title = "Online Security") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -555,17 +556,17 @@ plot_security <- churn %>%
       legend.text = element_text(face = "bold")
    )
 
-plot_backup <- churn %>% 
+plot_backup <- churn |> 
    mutate(online_backup = case_when(
       online_backup == "Yes" ~ "Backup",
       online_backup == "No" ~ "No backup",
-      TRUE ~ "No internet"
-   )) %>% 
+      .default = "No internet"
+   )) |> 
    mutate(online_backup = fct_relevel(
-      online_backup, levels = c("No backup", "Backup", "No internet")
-   )) %>% 
+      online_backup, c("No backup", "Backup", "No internet")
+   )) |> 
    ggplot(aes(x = online_backup, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", alpha = 0.5) + 
+   geom_bar(position = "dodge2", colour = "black", alpha = 0.5, width = 0.5) + 
    labs(x = NULL, y = NULL, title = "Online Backup") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -579,17 +580,17 @@ plot_backup <- churn %>%
       legend.text = element_text(face = "bold")
    )
 
-plot_protection <- churn %>% 
+plot_protection <- churn |> 
    mutate(device_protection = case_when(
       device_protection == "Yes" ~ "Protection",
       device_protection == "No" ~ "No protection",
-      TRUE ~ "No internet"
-   )) %>% 
+      .default = "No internet"
+   )) |> 
    mutate(device_protection = fct_relevel(
       device_protection, c("No protection", "Protection", "No internet")
-   )) %>% 
+   )) |> 
    ggplot(aes(x = device_protection, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", alpha = 0.5) + 
+   geom_bar(position = "dodge2", colour = "black", alpha = 0.5, width = 0.5) + 
    labs(x = NULL, y = NULL, title = "Device Protection") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -603,17 +604,17 @@ plot_protection <- churn %>%
       legend.text = element_text(face = "bold")
    )
 
-plot_support <- churn %>% 
+plot_support <- churn |> 
    mutate(tech_support = case_when(
       tech_support == "Yes" ~ "Supported",
       tech_support == "No" ~ "No support",
-      TRUE ~ "No internet"
-   )) %>% 
+      .default = "No internet"
+   )) |> 
    mutate(tech_support = fct_relevel(
       tech_support, c("No support", "Supported", "No internet")
-   )) %>% 
+   )) |> 
    ggplot(aes(x = tech_support, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", alpha = 0.5) + 
+   geom_bar(position = "dodge2", colour = "black", alpha = 0.5, width = 0.5) + 
    labs(x = NULL, y = NULL, title = "Tech Support") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -648,12 +649,12 @@ Is this speculation supported by the data?
 
 ```{r}
 
-plot_billing <- churn %>% 
+plot_billing <- churn |> 
    mutate(paperless_billing = if_else(
       paperless_billing == "Yes", "Paperless", "Traditional"
-   )) %>% 
+   )) |> 
    ggplot(aes(x = paperless_billing, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", width = 0.8, alpha = 0.5) +
+   geom_bar(position = "dodge2", colour = "black", width = 0.3, alpha = 0.5) +
    labs(x = NULL, y = NULL, title = "Billing") +
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -666,10 +667,10 @@ plot_billing <- churn %>%
       legend.title = element_blank()
    )
 
-plot_contract <- churn %>% 
-   mutate(contract = if_else(contract == "Month-to-month", "Monthly", contract)) %>% 
+plot_contract <- churn |> 
+   mutate(contract = if_else(contract == "Month-to-month", "Monthly", contract)) |> 
    ggplot(aes(x = contract, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", alpha = 0.5) +
+   geom_bar(position = "dodge2", colour = "black", alpha = 0.5, width = 0.5) +
    labs(x = NULL, y = NULL, title = "Contract length") +
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -682,17 +683,17 @@ plot_contract <- churn %>%
       legend.title = element_blank()
    )
 
-plot_payment <- churn %>% 
+plot_payment <- churn |> 
    mutate(payment_method = case_when(
       payment_method == "Bank transfer (automatic)" ~ "Bank transfer",
       payment_method == "Credit card (automatic)" ~ "Credit card",
-      TRUE ~ payment_method
-   )) %>% 
+      .default = payment_method
+   )) |> 
    mutate(payment_method = fct_relevel(
       payment_method, c("Electronic check", "Mailed check", "Bank transfer", "Credit card")
-   )) %>% 
+   )) |> 
    ggplot(aes(x = payment_method, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", width = 0.9, alpha = 0.5) + 
+   geom_bar(position = "dodge2", colour = "black", width = 0.3, alpha = 0.5) + 
    labs(x = NULL, y = NULL, title = "Payment methods") + 
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
@@ -708,6 +709,7 @@ plot_payment <- churn %>%
 plot_payment / (plot_billing + plot_contract) +
    plot_layout(guides = "collect")
 
+
 ```
 
 As we suspected, the churn rate is higher for customers who have opted for `paperless bills`. We can also see that the more sophisticated form of payment, namely `electronic_check` is associated with a much greater risk of churn. 
@@ -719,12 +721,12 @@ Nevertheless, the above plot is of value. Suppose we consider the `contracts` fe
 
 ```{r}
 
-plot_contract_tech <- churn %>% 
-   filter(internet_service == "Fiber optic") %>% 
-   select(contract, churn_label) %>%
+plot_contract_tech <- churn |> 
+   filter(internet_service == "Fiber optic") |> 
+   select(contract, churn_label) |>
    ggplot(aes(x = contract, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", width = 0.9, alpha = 0.5) +
-   labs(x = NULL, y = NULL, title = "Contract length for technically aware customers") +
+   geom_bar(position = "dodge2", colour = "black", width = 0.3, alpha = 0.5) +
+   labs(x = NULL, y = NULL, title = "Technically aware customers") +
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
       labels = c("Retained", "Churned")
@@ -736,12 +738,12 @@ plot_contract_tech <- churn %>%
       legend.title = element_blank()
    )
 
-plot_contract_non_tech <- churn %>% 
-   filter(internet_service != "Fiber optic") %>% 
-   select(contract, churn_label) %>%
+plot_contract_non_tech <- churn |> 
+   filter(internet_service != "Fiber optic") |> 
+   select(contract, churn_label) |>
    ggplot(aes(x = contract, fill = churn_label)) + 
-   geom_bar(position = "dodge", colour = "black", width = 0.9, alpha = 0.5) + 
-   labs(x = NULL, y = NULL, title = "Contract length for non-technically aware customers") +
+   geom_bar(position = "dodge2", colour = "black", width = 0.3, alpha = 0.5) + 
+   labs(x = NULL, y = NULL, title = "Non-technically aware customers") +
    scale_fill_manual(
       values = c("#CB9E23", "#456355"),
       labels = c("Retained", "Churned")
@@ -769,13 +771,13 @@ With the variables that concern money, we shall take a slightly different approa
 
 ```{r}
 
-plot_monthly_charges <- churn %>% 
-   select(monthly_charges, churn_label) %>% 
-   mutate(monthly_charges = cut_number(monthly_charges, n = 6)) %>% 
-   group_by(monthly_charges) %>% 
-   mutate(percent_churn = sum(churn_label == "Yes") / length(churn_label)) %>% 
-   ungroup() %>% 
-   mutate(monthly_charges = factor(monthly_charges, labels = as.character(1:6))) %>% 
+plot_monthly_charges <- churn |> 
+   select(monthly_charges, churn_label) |> 
+   mutate(monthly_charges = cut_number(monthly_charges, n = 6)) |> 
+   group_by(monthly_charges) |> 
+   mutate(percent_churn = sum(churn_label == "Yes") / length(churn_label)) |> 
+   ungroup() |> 
+   mutate(monthly_charges = factor(monthly_charges, labels = as.character(1:6))) |> 
    ggplot(aes(x = monthly_charges, y = percent_churn, group = 1)) + 
    geom_point(size = 3.5) + 
    geom_line(size = 0.75) +
@@ -787,13 +789,13 @@ plot_monthly_charges <- churn %>%
       plot.title = element_text(face = "bold", size = 14)
    )
 
-plot_total_charges <- churn %>% 
-   select(total_charges, churn_label) %>% 
-   mutate(total_charges = cut_number(total_charges, n = 6)) %>% 
-   group_by(total_charges) %>% 
-   mutate(percent_churn = sum(churn_label == "Yes") / length(churn_label)) %>% 
-   ungroup() %>% 
-   mutate(total_charges = factor(total_charges, labels = as.character(1:6))) %>% 
+plot_total_charges <- churn |> 
+   select(total_charges, churn_label) |> 
+   mutate(total_charges = cut_number(total_charges, n = 6)) |> 
+   group_by(total_charges) |> 
+   mutate(percent_churn = sum(churn_label == "Yes") / length(churn_label)) |> 
+   ungroup() |> 
+   mutate(total_charges = factor(total_charges, labels = as.character(1:6))) |> 
    ggplot(aes(x = total_charges, y = percent_churn, group = 1)) + 
    geom_point(size = 3.5) + 
    geom_line(size = 0.75) +
@@ -805,23 +807,23 @@ plot_total_charges <- churn %>%
       plot.title = element_text(face = "bold", size = 14)
    )
 
-plot_tenure <- churn %>% 
+plot_tenure <- churn |> 
    mutate(tenure = case_when(
       tenure_months <= 12 ~ "1",
       tenure_months <= 24 ~ "2",
       tenure_months <= 36 ~ "3",
       tenure_months <= 48 ~ "4",
       tenure_months <= 60 ~ "5",
-      TRUE ~ "5+"
-   )) %>% 
-   group_by(tenure) %>% 
+      .default = "5+"
+   )) |> 
+   group_by(tenure) |> 
    mutate(
       totals = n(),
       churned = sum(churn_label == "Yes"),
       percent_churned = churned / totals
-   ) %>% 
-   ungroup() %>% 
-   mutate(tenure = fct_relevel(tenure, c("1", "2", "3", "4", "5", "5+"))) %>% 
+   ) |> 
+   ungroup() |> 
+   mutate(tenure = fct_relevel(tenure, c("1", "2", "3", "4", "5", "5+"))) |> 
    ggplot(aes(x = tenure, y = percent_churned, group = 1)) + 
    geom_point(size = 3.5) +
    geom_line(size = 0.75) + 
@@ -833,12 +835,12 @@ plot_tenure <- churn %>%
       plot.title = element_text(face = "bold", size = 14)
    )
 
-plot_cltv <- churn %>% 
-   mutate(group_cltv = cut_number(cltv, n = 6)) %>% 
-   group_by(group_cltv) %>% 
-   mutate(percent_churn = sum(churn_label == "Yes") / length(churn_label)) %>% 
-   ungroup() %>% 
-   mutate(group_cltv = factor(group_cltv, labels = as.character(1:6))) %>% 
+plot_cltv <- churn |> 
+   mutate(group_cltv = cut_number(cltv, n = 6)) |> 
+   group_by(group_cltv) |> 
+   mutate(percent_churn = sum(churn_label == "Yes") / length(churn_label)) |> 
+   ungroup() |> 
+   mutate(group_cltv = factor(group_cltv, labels = as.character(1:6))) |> 
    ggplot(aes(x = group_cltv, y = percent_churn, group = 1)) + 
    geom_point(size = 3.5) + 
    geom_line(size = 0.75) + 
@@ -868,13 +870,13 @@ The first step is to engineer a couple of features that might help our predictio
 
 ```{r}
 
-churn <- churn %>% 
-   mutate(avg_cost = total_charges / tenure_months) %>% 
+churn <- churn |> 
+   mutate(avg_cost = total_charges / tenure_months) |> 
    mutate(diff_charge = case_when(
       avg_cost > monthly_charges ~ "Less",
       avg_cost < monthly_charges ~ "More",
-      TRUE ~ "Same"
-   )) %>% 
+      .default = "Same"
+   )) |> 
    select(-avg_cost)
 
 ```
@@ -883,13 +885,13 @@ The next feature helps us see whether the customer is *able* to churn. Any custo
 
 ```{r}
 
-churn <- churn %>% 
+churn <- churn |> 
    mutate(able_to_churn = case_when(
       contract == "Month-to-month" ~ "Yes",
       contract == "One year" & tenure_months %% 12 == 0 ~ "Yes",
       contract == "Two year" & tenure_months %% 24 == 0 ~ "Yes",
       tenure_months == 0 ~ "No",
-      TRUE ~ "No"
+      .default = "No"
    ))
 
 ```
@@ -925,11 +927,11 @@ The `recipe()` contains all the data preprocessing steps:
 
 ```{r}
 
-churn_recipe <- recipe(churn_label ~ ., data = churn_train) %>% 
-   step_rm(cltv) %>% 
-   step_string2factor(churn_label, skip = TRUE) %>% 
-   step_string2factor(all_nominal_predictors()) %>% 
-   step_normalize(all_numeric_predictors()) %>% 
+churn_recipe <- recipe(churn_label ~ ., data = churn_train) |> 
+   step_rm(cltv) |> 
+   step_string2factor(churn_label, skip = TRUE) |> 
+   step_string2factor(all_nominal_predictors()) |> 
+   step_normalize(all_numeric_predictors()) |> 
    step_dummy(all_nominal_predictors(), one_hot = TRUE)
 
 ```
@@ -942,8 +944,8 @@ churn_spec <- boost_tree(
    mtry = tune(), trees = tune(), min_n = tune(), 
    tree_depth = tune(), learn_rate = tune(), loss_reduction = tune(), 
    sample_size = tune(), stop_iter = tune()
-) %>% 
-   set_engine("xgboost") %>% 
+) |> 
+   set_engine("xgboost") |> 
    set_mode("classification")
 
 ```
@@ -952,8 +954,8 @@ Tying our recipe and model specification together into a `workflow()` makes our 
 
 ```{r}
 
-churn_wrkflw <- workflow() %>% 
-   add_model(churn_spec) %>% 
+churn_wrkflw <- workflow() |> 
+   add_model(churn_spec) |> 
    add_recipe(churn_recipe)
 
 ```
@@ -1009,7 +1011,7 @@ The final step is training the model on our training data:
 ```{r}
 
 churn_model <- 
-   churn_wrkflw_final %>% fit(churn_train)
+   churn_wrkflw_final |> fit(churn_train)
 
 ```
 
@@ -1017,9 +1019,9 @@ Now that we finally have a model, let's see what features are most important:
 
 ```{r}
 
-churn_model %>% 
-   extract_fit_engine() %>% vi() %>% 
-   arrange(desc(Importance)) %>% head(15) %>% 
+churn_model |> 
+   extract_fit_engine() |> vi() |> 
+   arrange(desc(Importance)) |> head(15) |> 
    ggplot(aes(x = fct_reorder(Variable, Importance), y = Importance)) + 
    geom_point(size = 2) + 
    geom_segment(aes(x = Variable, xend = Variable, y = 0, yend = Importance), size = 1.25) +
@@ -1042,7 +1044,7 @@ Now we must see how our data performs on unseen data. First we use the model on 
 
 ```{r}
 
-churn_preds <- churn_model %>% 
+churn_preds <- churn_model |> 
    predict(new_data = churn_test)
 
 ```
@@ -1051,9 +1053,9 @@ Next we bind our predictions to our test data so we can use functions from the `
 
 ```{r}
 
-churn_preds <- churn_test %>% 
-   select(churn_label) %>% 
-   bind_cols(churn_preds) %>% 
+churn_preds <- churn_test |> 
+   select(churn_label) |> 
+   bind_cols(churn_preds) |> 
    mutate(churn_label = factor(churn_label))
 
 ```
@@ -1062,7 +1064,7 @@ Before evaluating our model's perforamnce let's look at a very naive prediction:
 
 ```{r}
 
-churn_preds %>% 
+churn_preds |> 
    summarise(
       percent_retained = sum(churn_label == "No") / n(),
       percent_churned = sum(churn_label == "Yes") / n()
@@ -1076,7 +1078,7 @@ Here are the results:
 
 ```{r}
 
-churn_preds %>% 
+churn_preds |> 
    accuracy(churn_label, .pred_class)
 
 ```
@@ -1087,7 +1089,7 @@ First let's construct a confusion matrix:
 
 ```{r}
 
-churn_preds %>% 
+churn_preds |> 
    conf_mat(truth = churn_label, estimate = .pred_class)
 
 ```
@@ -1096,7 +1098,7 @@ Consider the values in the "Yes" row. These are all the cases where our model pr
 
 ```{r}
 
-churn_preds %>% 
+churn_preds |> 
    precision(churn_label, .pred_class, event_level = "second")
 
 ```
@@ -1107,7 +1109,7 @@ Now consider the values in the "Yes" column. These are all of the cases where th
 
 ```{r} 
 
-churn_preds %>% 
+churn_preds |> 
    recall(churn_label, .pred_class, event_level = "second")
 
 ```
