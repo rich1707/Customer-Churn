@@ -16,7 +16,7 @@ number-sections: true
 df-print: paged
 editor: visual
 theme: 
-      - spacelab
+      - cosmo
       - custom.scss 
 ---
 
@@ -833,7 +833,7 @@ The `cltv` feature seems to indicate a prediction made by the company. We can ex
 
 Now we can start building a model.
 
-The first step is to engineer a couple of features that might help our predictions more accurate. Our first new variable tells us how the customer's current `monthly_charge` differs from the average `monthly_charge` they have paid previously.
+The first step is to engineer a couple of features that might help our predictions become more accurate. Our first new variable tells us how the customer's current `monthly_charge` differs from the average `monthly_charge` they have paid previously.
 
 ```{r}
 churn <- churn |> 
