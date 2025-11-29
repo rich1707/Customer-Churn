@@ -16,7 +16,7 @@ number-sections: true
 df-print: paged
 editor: visual
 theme: 
-      - cosmo
+      - darkly
       - custom.scss 
 ---
 
@@ -80,7 +80,7 @@ The other variable with missing values is `total_charges`. When we examine our d
 ```{r}
 churn |> 
    filter(tenure_months == 0) |> 
-   select(tenure_months, total_charges) |> 
+   select(tenure_months, total_charges) |>
    distinct()
 ```
 
